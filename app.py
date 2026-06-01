@@ -90,6 +90,15 @@ EKIP_CONFIG = {
         "lunch_limit": 2700,
         "dosyalar": ["vardiya", "statu", "call_statu"],
     },
+    "OU Call (Concentrix)": {
+        "tip": "call",
+        "agent_col": "Temsilci",
+        "fix_year": False,
+        "break_limit": 2700,
+        "lunch_limit": 2700,
+        "call_cross": True,   # Chat Invisible ile çapraz
+        "dosyalar": ["vardiya", "statu", "chat_statu"],
+    },
 }
 
 # ── Ekip seçimi ───────────────────────────────────────────────────────────────
