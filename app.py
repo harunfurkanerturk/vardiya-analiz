@@ -70,8 +70,8 @@ EKIP_CONFIG = {
         "fix_year": True,
         "break_limit": 1800,
         "lunch_limit": 1800,
-        "call_cross": False,
-        "dosyalar": ["vardiya", "statu"],
+        "call_cross": True,   # Chat Invisible ile çapraz
+        "dosyalar": ["vardiya", "statu", "chat_statu"],
     },
     "OU Chat (Mplus)": {
         "tip": "chat",
