@@ -154,18 +154,28 @@ def mola_detay_str(rows,label):
         sn=int(r["sure"]); parts.append(f"{s}-{e} ({sn//60}dk {sn%60}sn)")
     return f" | {label}: "+", ".join(parts) if parts else ""
 
-def find_system_invisibles(invis_rows,session):
-    disc_times=session[session["statu"]=="Disconnected"]["start_ts"].tolist()
-    disc_ends=session[session["statu"]=="Disconnected"]["end_ts"].dropna().tolist()
-    all_disc=disc_times+disc_ends
+def find_system_invisibles(invis_rows, session):
+    """
+    Sistem kesintisi sayilan Invisible'lar:
+    1. Bitis zamani bir Disconnected'in bitis zamaniyla ayni -> baglanti koptu, sistem otomatik acti -> ele
+    2. <30sn suren ve Disconnected'a yakin (±10sn) baslayan -> kisa sistem kesintisi -> ele
+    Disconnected eslesmesi yoksa -> temsilci kendisi secmis -> hatali statu say
+    """
+    disc_starts = session[session["statu"]=="Disconnected"]["start_ts"].tolist()
+    disc_ends   = session[session["statu"]=="Disconnected"]["end_ts"].dropna().tolist()
+    all_disc    = disc_starts + disc_ends
     sistem=[]; diger=[]
     for _,ir in invis_rows.iterrows():
-        is_s=(ir["sure"]<DISC_MAX_DUR and any(abs(ir["start_ts"]-d)<=DISC_TOL for d in all_disc))
-        (sistem if is_s else diger).append(ir)
+        bitis_eslesme = (not pd.isna(ir["end_ts"]) and ir["end_ts"] in disc_ends)
+        kisa_kesinti  = (ir["sure"]<DISC_MAX_DUR and any(abs(ir["start_ts"]-d)<=DISC_TOL for d in all_disc))
+        if bitis_eslesme or kisa_kesinti:
+            sistem.append(ir)
+        else:
+            diger.append(ir)
     diger_df=pd.DataFrame(diger) if diger else pd.DataFrame(columns=invis_rows.columns)
     return sistem,diger_df
 
-def merge_gecis_invisible(gecis_rows,invis_rows):
+def merge_gecis_invisible(gecis_rows, invis_rows):
     if gecis_rows.empty and invis_rows.empty: return [],[]
     invis_list=list(invis_rows.iterrows()) if not invis_rows.empty else []
     gecis_list=list(gecis_rows.iterrows()) if not gecis_rows.empty else []
@@ -179,7 +189,9 @@ def merge_gecis_invisible(gecis_rows,invis_rows):
             if sm or em: found=(ii,ir); break
         if found:
             ii,ir=found; matched.add(ii)
-            tekil.append({"start_ts":gr["start_ts"],"end_ts":gr["end_ts"],
+            # En erken baslangic + bitis (uzun olani al), sure max
+            s_start=min(gr["start_ts"],ir["start_ts"])
+            tekil.append({"start_ts":s_start,"end_ts":gr["end_ts"],
                           "sure":max(gr["sure"],ir["sure"]),"label":"Mola/Yemek/Çıkış Geçiş"})
         else:
             tekil.append({"start_ts":gr["start_ts"],"end_ts":gr["end_ts"],
@@ -192,7 +204,8 @@ def merge_gecis_invisible(gecis_rows,invis_rows):
         if not pd.isna(e) and e in se: continue
         if any(abs(s-x)<=START_TOL for x in ss2): continue
         di.append(ir)
-        if not pd.isna(e): se.append(e); ss2.append(s)
+        if not pd.isna(e): se.append(e)
+        ss2.append(s)
     tek_s=sorted(tekil,key=lambda r:r["start_ts"])
     se2=[]; ss3=[]; dg=[]
     for gr in tek_s:
@@ -200,7 +213,8 @@ def merge_gecis_invisible(gecis_rows,invis_rows):
         if not pd.isna(e) and e in se2: continue
         if any(abs(s-x)<=START_TOL for x in ss3): continue
         dg.append(gr)
-        if not pd.isna(e): se2.append(e); ss3.append(s)
+        if not pd.isna(e): se2.append(e)
+        ss3.append(s)
     return dg,di
 
 # ── CALL ANALİZ ───────────────────────────────────────────────────────────────
