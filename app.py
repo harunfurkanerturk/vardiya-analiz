@@ -19,14 +19,6 @@ st.markdown("""
 <style>
 .main-title { font-size: 28px; font-weight: 700; color: #2E5FA3; margin-bottom: 4px; }
 .sub-title  { font-size: 14px; color: #666; margin-bottom: 24px; }
-.metric-box {
-    background: #F0F4FF; border-radius: 10px; padding: 16px 20px;
-    border-left: 4px solid #2E5FA3; margin-bottom: 8px;
-}
-.metric-label { font-size: 12px; color: #666; margin: 0; }
-.metric-value { font-size: 22px; font-weight: 700; color: #2E5FA3; margin: 0; }
-.ihlal-row { display: flex; justify-content: space-between; padding: 6px 0;
-             border-bottom: 1px solid #EEE; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -51,7 +43,7 @@ EKIP_CONFIG = {
         "fix_year": True,
         "break_limit": 1800,
         "lunch_limit": 1800,
-        "call_cross": True,   # Chat Invisible ile çapraz
+        "call_cross": True,
         "name_map": {"esma çiftci": "Esma Çiftçi"},
         "dosyalar": ["vardiya", "statu", "chat_statu"],
     },
@@ -70,7 +62,7 @@ EKIP_CONFIG = {
         "fix_year": True,
         "break_limit": 1800,
         "lunch_limit": 1800,
-        "call_cross": True,   # Chat Invisible ile çapraz
+        "call_cross": True,
         "dosyalar": ["vardiya", "statu", "chat_statu"],
     },
     "OU Chat (Mplus)": {
@@ -96,7 +88,7 @@ EKIP_CONFIG = {
         "fix_year": False,
         "break_limit": 2700,
         "lunch_limit": 2700,
-        "call_cross": True,   # Chat Invisible ile çapraz
+        "call_cross": True,
         "dosyalar": ["vardiya", "statu", "chat_statu"],
     },
 }
@@ -105,6 +97,10 @@ EKIP_CONFIG = {
 st.markdown("### 1️⃣ Ekip Seç")
 ekip = st.selectbox("Ekip", list(EKIP_CONFIG.keys()), label_visibility="collapsed")
 cfg  = EKIP_CONFIG[ekip]
+
+# Üçüncü dosya gerekli mi?
+ucuncu_dosya_gerekli = ("call_statu" in cfg.get("dosyalar", []) or
+                        "chat_statu" in cfg.get("dosyalar", []))
 
 st.markdown("---")
 
@@ -116,23 +112,25 @@ col1, col2, col3 = st.columns(3)
 with col1:
     vardiya_file = st.file_uploader(
         "📅 Vardiya Planı (.xlsx)",
-        type=["xlsx","xlsm"],
+        type=["xlsx", "xlsm"],
         key="vardiya"
     )
 with col2:
     statu_file = st.file_uploader(
         "📊 Statü Raporu (.xlsx / .csv)",
-        type=["xlsx","xlsm","csv"],
+        type=["xlsx", "xlsm", "csv"],
         key="statu"
     )
 with col3:
     call_statu_file = None
-    if "call_statu" in cfg.get("dosyalar",[]) or "chat_statu" in cfg.get("dosyalar",[]):
-        label = "📞 Call Statü Raporu (.xlsx / .csv)" if cfg["tip"]=="chat" else "💬 Chat Statü Raporu (.xlsx)"
+    if ucuncu_dosya_gerekli:
+        label = ("📞 Call Statü Raporu (.xlsx / .csv)"
+                 if cfg["tip"] == "chat"
+                 else "💬 Chat Statü Raporu (.xlsx)")
         call_statu_file = st.file_uploader(
             label,
-            type=["xlsx","xlsm","csv"],
-            key="call_statu"
+            type=["xlsx", "xlsm", "csv"],
+            key="ucuncu_dosya"
         )
 
 st.markdown("---")
@@ -142,15 +140,23 @@ st.markdown("### 3️⃣ Analizi Başlat")
 
 if st.button("🔍 Rapor Oluştur", type="primary", use_container_width=True):
 
-    # Dosya kontrolü
-    required = [vardiya_file, statu_file]
-    if ("call_statu" in cfg.get("dosyalar",[]) or
-        "chat_statu" in cfg.get("dosyalar",[])):
-        required.append(call_statu_file)
+    # ── Dosya kontrolü (session_state üzerinden, en güvenilir) ────────────────
+    eksik = []
+    if st.session_state.get("vardiya") is None:
+        eksik.append("Vardiya Planı")
+    if st.session_state.get("statu") is None:
+        eksik.append("Statü Raporu")
+    if ucuncu_dosya_gerekli and st.session_state.get("ucuncu_dosya") is None:
+        eksik.append("Call/Chat Statü Raporu")
 
-    if any(f is None for f in required):
-        st.error("⚠️ Lütfen gerekli tüm dosyaları yükleyin.")
+    if eksik:
+        st.error("⚠️ Şu dosyalar eksik: " + ", ".join(eksik))
         st.stop()
+
+    # session_state'ten oku (en güncel hali)
+    vardiya_file    = st.session_state.get("vardiya")
+    statu_file      = st.session_state.get("statu")
+    call_statu_file = st.session_state.get("ucuncu_dosya") if ucuncu_dosya_gerekli else None
 
     with st.spinner("Analiz yapılıyor..."):
 
@@ -196,6 +202,7 @@ if st.button("🔍 Rapor Oluştur", type="primary", use_container_width=True):
                 sistem_kes=None, all_agents=all_agents
             )
             ihlal_types = IHLAL_TYPES_CALL
+            sistem_kes = None
 
         # ── CHAT analizi ──────────────────────────────────────────────────────
         else:
@@ -266,7 +273,7 @@ if st.button("🔍 Rapor Oluştur", type="primary", use_container_width=True):
     if len(df_v) > 0:
         with st.expander("📋 İlk 50 satır önizleme"):
             st.dataframe(
-                df_v.head(50)[['Temsilci','Tarih','Vardiya','İhlal Türü','Detay']],
+                df_v.head(50)[['Temsilci', 'Tarih', 'Vardiya', 'İhlal Türü', 'Detay']],
                 use_container_width=True,
                 height=400
             )
