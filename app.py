@@ -39,7 +39,7 @@ EKIP_CONFIG = {
     },
     "OA Call (Mplus)": {
         "tip": "call",
-        "agent_col": "Temsilci",
+        "agent_col": "Temsilci Adı",
         "fix_year": True,
         "break_limit": 1800,
         "lunch_limit": 1800,
@@ -58,7 +58,7 @@ EKIP_CONFIG = {
     },
     "OU Call (Mplus)": {
         "tip": "call",
-        "agent_col": "Temsilci",
+        "agent_col": "Temsilci Adı",
         "fix_year": True,
         "break_limit": 1800,
         "lunch_limit": 1800,
@@ -67,7 +67,7 @@ EKIP_CONFIG = {
     },
     "OU Chat (Mplus)": {
         "tip": "chat",
-        "agent_col": "Temsilci",
+        "agent_col": "Temsilci Adı",
         "fix_year": True,
         "break_limit": 1800,
         "lunch_limit": 1800,
@@ -76,7 +76,7 @@ EKIP_CONFIG = {
     },
     "OU Chat (Concentrix)": {
         "tip": "chat",
-        "agent_col": "Temsilci",
+        "agent_col": "Temsilci Adı",
         "fix_year": False,
         "break_limit": 2700,
         "lunch_limit": 2700,
@@ -84,7 +84,7 @@ EKIP_CONFIG = {
     },
     "OU Call (Concentrix)": {
         "tip": "call",
-        "agent_col": "Temsilci",
+        "agent_col": "Temsilci Adı",
         "fix_year": False,
         "break_limit": 2700,
         "lunch_limit": 2700,
